@@ -19,6 +19,7 @@ from debug_commands import handle_debug_commands
 from gpt import ask_gpt
 from mood_engine import get_mood
 from long_memory import get_long_memory, add_long_memory
+from profile import get_profile
 from spontaneous_chat import SpontaneousChatEngine
 
 load_dotenv()
@@ -58,6 +59,10 @@ async def on_message(message):
     user_text = message.content
     log("USER", user_text)
 
+    # 新規ユーザーなら自発会話ループ追加
+    if user_id not in chat_engine.running_tasks:
+        chat_engine.start_for_user(user_id)
+
     # ユーザー活動更新
     tracker.update_user_activity(user_id, message.channel.id)
 
@@ -84,8 +89,11 @@ async def on_message(message):
     long_memories = get_long_memory(user_id)
     add_long_memory(user_id, user_text)
 
+    # プロフィール取得（名前・趣味など）
+    profile = get_profile(user_id)
+
     # build_context に渡す
-    context = build_context(emotion, affection, mood, short_memories, long_memories)
+    context = build_context(emotion, affection, mood, short_memories, long_memories, profile)
 
     # GPT に投げる
     reply = ask_gpt(context, user_text)
@@ -94,9 +102,6 @@ async def on_message(message):
     add_message(user_id, "assistant", reply)
     await message.channel.send(reply)
 
-    # 新規ユーザーなら自発会話ループ追加
-    if user_id not in chat_engine.running_tasks:
-        chat_engine.start_for_user(user_id)
 
 # -------------------------------
 # Bot起動

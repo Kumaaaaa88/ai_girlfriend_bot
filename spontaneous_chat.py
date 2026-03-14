@@ -13,6 +13,7 @@ from long_memory import get_long_memory
 from prompt import build_context
 from mood_engine import get_mood
 from activity_tracker import update_last_active, get_lonely_score
+from profile import get_profile
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -52,6 +53,9 @@ class SpontaneousChatEngine:
         short_memories = get_memory(user_id)
         long_memories = get_long_memory(user_id)
 
+        # プロフィール
+        profile = get_profile(user_id)
+
         # 3. 寂しさスコア
         lonely_score = get_lonely_score(user_id)
 
@@ -68,7 +72,7 @@ class SpontaneousChatEngine:
             user_message = random.choice(FALLBACK_TOPICS)
 
         # 6. context生成
-        context = build_context(emotion, affection, mood, short_memories, long_memories)
+        context = build_context(emotion, affection, mood, short_memories, long_memories, profile)
 
         # 7. GPT呼び出し
         try:

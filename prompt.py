@@ -101,11 +101,19 @@ def build_memory_prompt(short_memories, long_memories):
     for m in short_memories:
         role = m.get("role", "user")
         content = m.get("content", "")
-        all_memories.append(f"[{role}] {content}")
+        # モデルがそのまま "[user]" などを返さないように、人間向けラベルに変換
+        if role == "user":
+            role_label = "ユーザー"
+        elif role == "assistant":
+            role_label = "ユナ"
+        else:
+            role_label = role
+
+        all_memories.append(f"{role_label}: {content}")
 
     # 長期
     for m in long_memories:
-        all_memories.append(f"[long-term] {m}")
+        all_memories.append(f"思い出: {m}")
 
     if not all_memories:
         return ""
@@ -116,14 +124,33 @@ def build_memory_prompt(short_memories, long_memories):
 
     return prompt_text
 
+
+# -------------------------------
+# プロフィールプロンプト
+# -------------------------------
+def build_profile_prompt(profile):
+    name = profile.get("name", "不明")
+    hobby = profile.get("hobby", "不明")
+    favorite_food = profile.get("favorite_food", "不明")
+
+    return f"""
+ユーザー情報
+
+名前: {name}
+趣味: {hobby}
+好きな食べ物: {favorite_food}
+"""
+
+
 # -------------------------------
 # build_context（V3最終形）
 # -------------------------------
-def build_context(emotion, affection, mood, short_memories, long_memories):
+def build_context(emotion, affection, mood, short_memories, long_memories, profile):
     emotion_prompt = build_emotion_prompt(emotion)
     relationship_prompt = build_relationship_prompt(affection)
     mood_prompt = build_mood_prompt(mood)
     memory_prompt = build_memory_prompt(short_memories, long_memories)
+    profile_prompt = build_profile_prompt(profile)
 
     context = f"""
 {SYSTEM_PROMPT}
@@ -135,5 +162,7 @@ def build_context(emotion, affection, mood, short_memories, long_memories):
 {mood_prompt}
 
 {memory_prompt}
+
+{profile_prompt}
 """
     return context
