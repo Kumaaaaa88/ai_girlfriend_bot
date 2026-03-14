@@ -12,7 +12,7 @@ from memory import get_memory, add_message
 from long_memory import get_long_memory
 from prompt import build_context
 from mood_engine import get_mood
-from activity_tracker import update_last_active, get_lonely_score
+from activity_tracker import ActivityTracker
 from profile import get_profile
 
 load_dotenv()
@@ -20,6 +20,8 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MY_CHANNEL_ID = os.getenv("MY_CHANNEL_ID")
 
 client = OpenAI(api_key=OPENAI_API_KEY)
+
+tracker = ActivityTracker()
 
 # -------------------------------
 # フォールバック話題
@@ -33,6 +35,38 @@ FALLBACK_TOPICS = [
     "ねえねえ、今何してるの？",
     "今日疲れてない？",
 ]
+
+# -------------------------------
+# 話題生成
+# -------------------------------
+def generate_topic(user_id):
+
+    emotion = get_emotion(user_id)
+    # affection = get_affection(user_id)
+    memories = get_long_memory(user_id)
+    profile = get_profile(user_id)
+
+    # memory話題
+    if memories and random.random() < 0.4:
+        memory = random.choice(memories)
+        return f"ねえ、前に話してた「{memory}」どうなった？"
+
+    # hobby話題
+    hobby = profile.get("hobby")
+    if hobby and random.random() < 0.4:
+        return f"ねえねえ、最近{hobby}してる？"
+
+    # 感情話題
+    state = emotion["state"]
+
+    if state == "lonely":
+        return "ねえ…ちょっと寂しくなっちゃった"
+
+    if state == "happy":
+        return "ねえねえ、今日ちょっといい気分なんだ〜"
+
+    # fallback
+    return random.choice(FALLBACK_TOPICS)
 
 # -------------------------------
 # SpontaneousChatEngine クラス
@@ -57,7 +91,7 @@ class SpontaneousChatEngine:
         profile = get_profile(user_id)
 
         # 3. 寂しさスコア
-        lonely_score = get_lonely_score(user_id)
+        lonely_score = tracker.get_lonely()
 
         # 4. 発話確率
         chance = min(0.2 + 0.15 * lonely_score + 0.1 * (affection / 100), 0.8)
@@ -65,11 +99,7 @@ class SpontaneousChatEngine:
             return None  # 発話しない
 
         # 5. 話題選択
-        if long_memories:
-            topic = random.choice(long_memories)
-            user_message = f"ねえ、前に話してた {topic} のこと覚えてる？"
-        else:
-            user_message = random.choice(FALLBACK_TOPICS)
+        user_message = generate_topic(user_id)
 
         # 6. context生成
         context = build_context(emotion, affection, mood, short_memories, long_memories, profile)
@@ -79,10 +109,10 @@ class SpontaneousChatEngine:
             response = client.chat.completions.create(
                 model="gpt-4o-mini",
                 messages=[
-                    {"role": "system", "content": "あなたは可愛いAI彼女です"},
-                    {"role": "user", "content": context + "\n" + user_message}
+                    {"role": "system", "content": context},
+                    {"role": "user", "content": user_message}
                 ],
-                temperature=0.9
+                temperature=0.8
             )
             reply = response.choices[0].message.content.strip()
         except Exception as e:
@@ -93,12 +123,56 @@ class SpontaneousChatEngine:
         add_message(user_id, "assistant", reply)
 
         # 9. 最終アクティブ時間更新
-        update_last_active(user_id)
+        tracker.update_user_activity(user_id, MY_CHANNEL_ID)
 
         # 10. Discordに送信
         channel = self.bot.get_channel(int(MY_CHANNEL_ID))
         if channel:
             await channel.send(reply)
+
+        return reply
+
+    # TODO：テスト用の関数　maybe_spontaneous_chatに修正が入る場合ここも修正
+    async def force_chat(self, user_id):
+        """必ず1回分の会話を生成（テスト用）"""
+        # 1. ユナの状態
+        emotion = get_emotion(user_id)
+        affection = get_affection(user_id)
+        mood = get_mood(emotion, affection)
+
+        # 2. メモリ
+        short_memories = get_memory(user_id)
+        long_memories = get_long_memory(user_id)
+
+        # プロフィール
+        profile = get_profile(user_id)
+
+        # 3. 話題選択（確率チェックはしない）
+        user_message = generate_topic(user_id)
+
+        # 4. context生成
+        context = build_context(emotion, affection, mood, short_memories, long_memories, profile)
+
+        # 5. GPT呼び出し
+        try:
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": context},
+                    {"role": "user", "content": user_message}
+                ],
+                temperature=0.8
+            )
+            reply = response.choices[0].message.content.strip()
+        except Exception as e:
+            print("強制会話生成失敗:", e)
+            reply = user_message  # フォールバック
+
+        # 6. 短期メモリ保存
+        add_message(user_id, "assistant", reply)
+
+        # 7. 最終アクティブ時間更新
+        tracker.update_user_activity(user_id, MY_CHANNEL_ID)
 
         return reply
 

@@ -21,6 +21,7 @@ from mood_engine import get_mood
 from long_memory import get_long_memory, add_long_memory
 from profile import get_profile
 from spontaneous_chat import SpontaneousChatEngine
+from memory_importance import should_store_memory
 
 load_dotenv()
 
@@ -52,7 +53,7 @@ async def on_message(message):
     if message.author == bot.user:
         return
 
-    if await handle_debug_commands(bot, message):
+    if await handle_debug_commands(bot, message, chat_engine):
         return
 
     user_id = str(message.author.id)
@@ -87,7 +88,8 @@ async def on_message(message):
     # 短期/長期メモリ取得
     short_memories = get_memory(user_id)
     long_memories = get_long_memory(user_id)
-    add_long_memory(user_id, user_text)
+    if should_store_memory(user_text):
+        add_long_memory(user_id, user_text)
 
     # プロフィール取得（名前・趣味など）
     profile = get_profile(user_id)
