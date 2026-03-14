@@ -37,6 +37,7 @@ bot = discord.Client(intents=intents)
 
 tracker = ActivityTracker()
 chat_engine = SpontaneousChatEngine(bot)
+_last_processed_message_id = None  # 二重処理防止（Discordが同じメッセージでon_messageを2回叩く対策）
 
 # -------------------------------
 # 起動時処理
@@ -52,6 +53,12 @@ async def on_ready():
 async def on_message(message):
     if message.author == bot.user:
         return
+
+    # 同一メッセージの二重処理防止（memory.json / long_memory の二重登録・GPT二重呼び出しを防ぐ）
+    global _last_processed_message_id
+    if message.id == _last_processed_message_id:
+        return
+    _last_processed_message_id = message.id
 
     if await handle_debug_commands(bot, message, chat_engine):
         return
@@ -87,9 +94,9 @@ async def on_message(message):
 
     # 短期/長期メモリ取得
     short_memories = get_memory(user_id)
-    long_memories = get_long_memory(user_id)
     if should_store_memory(user_text):
         add_long_memory(user_id, user_text)
+    long_memories = get_long_memory(user_id)
 
     # プロフィール取得（名前・趣味など）
     profile = get_profile(user_id)

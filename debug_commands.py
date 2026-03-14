@@ -8,6 +8,8 @@ from mood_engine import get_mood
 from profile import get_profile
 from activity_tracker import ActivityTracker
 
+from debug import log
+
 tracker = ActivityTracker()
 
 
@@ -183,6 +185,7 @@ Mood: {mood}
         # 確率に関係なく必ず1回生成
         # reply = await chat_engine.maybe_spontaneous_chat(user_id)
         reply = await chat_engine.force_chat(user_id)
+        log("GPT", reply)
 
 
         if reply:

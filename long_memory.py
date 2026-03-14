@@ -1,6 +1,8 @@
 import json
 import os
 
+from debug import log
+
 FILE = "data/long_memory.json"
 
 # -----------------------
@@ -28,7 +30,7 @@ def add_long_memory(user_id, text):
 
     if text not in memory_state[user_id]:
         memory_state[user_id].append(text)
-
+    log("LONG_MEMORY", f"ユーザー {user_id} の長期記憶に追加: {text}")
     save_memory(memory_state)
 
 def get_long_memory(user_id):

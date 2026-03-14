@@ -15,6 +15,8 @@ from mood_engine import get_mood
 from activity_tracker import ActivityTracker
 from profile import get_profile
 
+from debug import log
+
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MY_CHANNEL_ID = os.getenv("MY_CHANNEL_ID")
@@ -167,12 +169,6 @@ class SpontaneousChatEngine:
         except Exception as e:
             print("強制会話生成失敗:", e)
             reply = user_message  # フォールバック
-
-        # 6. 短期メモリ保存
-        add_message(user_id, "assistant", reply)
-
-        # 7. 最終アクティブ時間更新
-        tracker.update_user_activity(user_id, MY_CHANNEL_ID)
 
         return reply
 
