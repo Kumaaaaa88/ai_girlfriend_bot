@@ -1,5 +1,6 @@
 from relationship import get_relationship_level
 from mood_engine import get_mood
+from memory_importance import select_top_memories
 
 SYSTEM_PROMPT = """
 あなたは「ユナ」というAIです。
@@ -92,35 +93,60 @@ def build_mood_prompt(mood):
 """
 
 # -------------------------------
-# メモリプロンプト（短期＋長期）
+# メモリプロンプト（短期＋長期＋Vector）
 # -------------------------------
-def build_memory_prompt(short_memories, long_memories):
-    all_memories = []
+def build_memory_prompt(short_memories, long_memories, vector_memories):
 
-    # 短期
-    for m in short_memories:
-        role = m.get("role", "user")
-        content = m.get("content", "")
-        # モデルがそのまま "[user]" などを返さないように、人間向けラベルに変換
-        if role == "user":
-            role_label = "ユーザー"
-        elif role == "assistant":
-            role_label = "ユナ"
-        else:
-            role_label = role
+    memories = []
 
-        all_memories.append(f"{role_label}: {content}")
+    # -------------------------
+    # 長期記憶（重要情報）
+    # -------------------------
+    if long_memories:
 
-    # 長期
-    for m in long_memories:
-        all_memories.append(f"思い出: {m}")
+        memories.append("\n【ユーザーに関する重要な記憶】")
 
-    if not all_memories:
+        important_memories = select_top_memories(long_memories)
+
+        for m in important_memories:
+            memories.append(f"- {m}")
+
+    # -------------------------
+    # Vector Memory（関連記憶）
+    # -------------------------
+    if vector_memories:
+
+        memories.append("\n【関連する過去の記憶】")
+
+        for m in vector_memories[:5]:
+            memories.append(f"- {m}")
+
+    # -------------------------
+    # 短期記憶（最近の会話）
+    # -------------------------
+    if short_memories:
+
+        memories.append("【最近の会話】")
+
+        for m in short_memories:
+
+            role = m.get("role", "user")
+            content = m.get("content", "")
+
+            if role == "user":
+                role_label = "ユーザー"
+            elif role == "assistant":
+                role_label = "ユナ"
+            else:
+                role_label = role
+
+            memories.append(f"{role_label}: {content}")
+
+    if not memories:
         return ""
 
-    prompt_text = "ユーザーに関する記憶:\n"
-    for mem in all_memories:
-        prompt_text += f"- {mem}\n"
+    prompt_text = "ユナが覚えている情報:\n"
+    prompt_text += "\n".join(memories)
 
     return prompt_text
 
@@ -145,12 +171,12 @@ def build_profile_prompt(profile):
 # -------------------------------
 # build_context（V3最終形）
 # -------------------------------
-def build_context(emotion, affection, mood, short_memories, long_memories, profile):
+def build_context(emotion, affection, mood, short_memories, profile, long_memories, vector_memories):
     emotion_prompt = build_emotion_prompt(emotion)
     relationship_prompt = build_relationship_prompt(affection)
     mood_prompt = build_mood_prompt(mood)
-    memory_prompt = build_memory_prompt(short_memories, long_memories)
     profile_prompt = build_profile_prompt(profile)
+    memory_prompt = build_memory_prompt(short_memories, long_memories, vector_memories)
 
     context = f"""
 {SYSTEM_PROMPT}
@@ -161,8 +187,9 @@ def build_context(emotion, affection, mood, short_memories, long_memories, profi
 
 {mood_prompt}
 
+{profile_prompt}
+
 {memory_prompt}
 
-{profile_prompt}
 """
     return context

@@ -15,6 +15,9 @@ from mood_engine import get_mood
 from activity_tracker import ActivityTracker
 from profile import get_profile
 
+# v4
+from memory_vector import search_memory
+
 from debug import log
 
 load_dotenv()
@@ -102,9 +105,10 @@ class SpontaneousChatEngine:
 
         # 5. 話題選択
         user_message = generate_topic(user_id)
+        vector_memories = search_memory(user_id, user_message)
 
         # 6. context生成
-        context = build_context(emotion, affection, mood, short_memories, long_memories, profile)
+        context = build_context(emotion, affection, mood, short_memories, profile, long_memories, vector_memories)
 
         # 7. GPT呼び出し
         try:

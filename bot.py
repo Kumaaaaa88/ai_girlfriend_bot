@@ -21,7 +21,11 @@ from mood_engine import get_mood
 from long_memory import get_long_memory, add_long_memory
 from profile import get_profile
 from spontaneous_chat import SpontaneousChatEngine
-from memory_importance import should_store_memory
+# from memory_importance import should_store_memory
+
+# V4
+from memory_brain import process_memory
+from memory_vector import add_vector_memory, search_memory
 
 load_dotenv()
 
@@ -94,15 +98,26 @@ async def on_message(message):
 
     # 短期/長期メモリ取得
     short_memories = get_memory(user_id)
-    if should_store_memory(user_text):
-        add_long_memory(user_id, user_text)
+    # if should_store_memory(user_text):
+    process_memory(user_id, user_text)
     long_memories = get_long_memory(user_id)
+    add_vector_memory(user_id, user_text)
+    vector_memories = search_memory(user_id, user_text)
 
     # プロフィール取得（名前・趣味など）
     profile = get_profile(user_id)
 
     # build_context に渡す
-    context = build_context(emotion, affection, mood, short_memories, long_memories, profile)
+    # context = build_context(emotion, affection, mood, short_memories, long_memories, profile)
+    context = build_context(
+        emotion,
+        affection,
+        mood,
+        short_memories,
+        profile,
+        long_memories,
+        vector_memories,
+    )
 
     # GPT に投げる
     reply = ask_gpt(context, user_text)
