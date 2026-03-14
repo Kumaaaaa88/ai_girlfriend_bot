@@ -1,0 +1,6 @@
+/bk/
+/data/
+/__pycache__/
+/npm-debug.log
+.env
+*.txt
