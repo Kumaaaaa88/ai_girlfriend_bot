@@ -40,8 +40,11 @@ def select_top_memories(memories, top_k=10):
 
         score = calculate_importance(m)
 
-        scored.append((score, m))
+        scored.append({
+            "text": m,
+            "score": score
+        })
 
-    scored.sort(reverse=True)
+    scored.sort(key=lambda x: x["score"], reverse=True)
 
-    return [m for score, m in scored[:top_k]]
+    return scored[:top_k]

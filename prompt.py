@@ -2,6 +2,7 @@ from relationship import get_relationship_level
 from mood_engine import get_mood
 from memory_importance import select_top_memories
 
+
 SYSTEM_PROMPT = """
 あなたは「ユナ」というAIです。
 

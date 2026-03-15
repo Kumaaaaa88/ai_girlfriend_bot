@@ -26,6 +26,7 @@ from spontaneous_chat import SpontaneousChatEngine
 # V4
 from memory_brain import process_memory
 from memory_vector import add_vector_memory, search_memory
+from memory_cleanup import run_memory_cleanup
 
 load_dotenv()
 
@@ -49,6 +50,7 @@ _last_processed_message_id = None  # 二重処理防止（Discordが同じメッ
 @bot.event
 async def on_ready():
     print("Bot Ready")
+    run_memory_cleanup()
 
 # -------------------------------
 # メッセージ受信処理
