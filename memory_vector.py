@@ -3,7 +3,7 @@ import json
 import numpy as np
 from openai import OpenAI
 from dotenv import load_dotenv
-git 
+
 load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")

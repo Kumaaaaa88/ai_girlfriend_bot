@@ -6,7 +6,8 @@ from openai import OpenAI
 from dotenv import load_dotenv
 import os
 
-from emotion import get_emotion
+from emotion import get_emotion, apply_lonely
+
 from relationship import get_affection
 from memory import get_memory, add_message
 from long_memory import get_long_memory
@@ -17,7 +18,7 @@ from profile import get_profile
 
 # v4
 from memory_vector import search_memory
-
+from emotion_decay import decay_emotion
 from debug import log
 
 load_dotenv()
@@ -28,7 +29,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 tracker = ActivityTracker()
 
-# -------------------------------
+# -------------------------------   
 # フォールバック話題
 # -------------------------------
 FALLBACK_TOPICS = [
@@ -96,7 +97,10 @@ class SpontaneousChatEngine:
         profile = get_profile(user_id)
 
         # 3. 寂しさスコア
-        lonely_score = tracker.get_lonely()
+        lonely_score = tracker.update_lonely()
+
+        # 寂しさを感情に反映
+        apply_lonely(user_id, lonely_score)
 
         # 4. 発話確率
         chance = min(0.2 + 0.15 * lonely_score + 0.1 * (affection / 100), 0.8)
@@ -142,6 +146,7 @@ class SpontaneousChatEngine:
     async def force_chat(self, user_id):
         """必ず1回分の会話を生成（テスト用）"""
         # 1. ユナの状態
+        decay_emotion(user_id)
         emotion = get_emotion(user_id)
         affection = get_affection(user_id)
         mood = get_mood(emotion, affection)
@@ -179,6 +184,7 @@ class SpontaneousChatEngine:
     async def spontaneous_loop(self, user_id, interval=600):
         """10分ごとに自発会話チェック"""
         while True:
+            decay_emotion(user_id)
             await self.maybe_spontaneous_chat(user_id)
             await asyncio.sleep(interval)
 

@@ -27,6 +27,10 @@ from spontaneous_chat import SpontaneousChatEngine
 from memory_brain import process_memory
 from memory_vector import add_vector_memory, search_memory
 from memory_cleanup import run_memory_cleanup
+from emotion_decay import decay_emotion
+from relationship_events import ensure_first_talk, check_first_game
+from memory_recall_engine import maybe_recall
+from emotion_memory import add_emotion_memory
 
 load_dotenv()
 
@@ -73,6 +77,9 @@ async def on_message(message):
     user_text = message.content
     log("USER", user_text)
 
+    ensure_first_talk(user_id)
+    check_first_game(user_id, user_text)
+
     # 新規ユーザーなら自発会話ループ追加
     if user_id not in chat_engine.running_tasks:
         chat_engine.start_for_user(user_id)
@@ -84,11 +91,23 @@ async def on_message(message):
     ensure_first_meet(user_id)
 
     # 感情更新
+    decay_emotion(user_id)
     emotion = update_emotion(user_id, user_text)
 
     # 好感度更新
     update_affection(user_id, user_text)
 
+    emotion_state = emotion["state"]
+    if emotion_state in ["happy", "sad", "lonely"]:
+
+        memory_text = f"{user_text} について話して{emotion_state}な気持ちになった"
+
+        add_emotion_memory(
+            user_id,
+            memory_text,
+            emotion_state,
+            importance=0.6
+        )
     # 好感度取得
     affection = get_affection(user_id)
 
@@ -120,6 +139,11 @@ async def on_message(message):
         long_memories,
         vector_memories,
     )
+
+    recall = maybe_recall(user_id, user_text)
+
+    if recall:
+        user_text = user_text + "\n\n" + recall
 
     # GPT に投げる
     reply = ask_gpt(context, user_text)

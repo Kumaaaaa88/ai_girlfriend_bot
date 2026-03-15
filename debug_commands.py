@@ -7,6 +7,7 @@ from long_memory import get_long_memory
 from mood_engine import get_mood
 from profile import get_profile
 from activity_tracker import ActivityTracker
+from relationship_events import get_events
 
 from debug import log
 
@@ -218,6 +219,24 @@ Mood: {mood}
 長期記憶数: {len(long_mem)}
 """
         )
+
+        return True
+    # -----------------------
+    # 特別な思い出 !events
+    # -----------------------
+    if cmd == "!events":
+
+        events = get_events(user_id)
+
+        if not events:
+            await message.channel.send("イベントはまだありません")
+            return True
+
+        text = "\n".join(
+            [f"{e['description']} ({e['date']})" for e in events]
+        )
+
+        await message.channel.send(f"【Relationship Events】\n{text}")
 
         return True
 

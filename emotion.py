@@ -46,6 +46,10 @@ def save_emotions():
 
 emotions = load_emotions()
 
+def save_emotion(user_id, emotion):
+
+    emotions[user_id] = emotion
+    save_emotions()
 
 # -----------------------------
 # get emotion
@@ -109,39 +113,6 @@ def update_emotion(user_id, text):
     log("EMOTION UPDATE", f"{user_id} → {new_state} (Lv{level})")
 
     return emotion
-
-
-# -----------------------------
-# 時間で感情を落ち着かせる
-# -----------------------------
-
-def decay_emotion(user_id):
-
-    user_id = str(user_id)
-
-    emotion = get_emotion(user_id)
-
-    now = time.time()
-
-    diff = now - emotion["updated_at"]
-
-    # 3時間で感情レベル1減る
-    hours = diff / 3600
-
-    if hours >= 3 and emotion["level"] > 0:
-
-        emotion["level"] -= 1
-        emotion["updated_at"] = now
-
-        if emotion["level"] == 0:
-            emotion["state"] = "normal"
-
-        emotions[user_id] = emotion
-
-        save_emotions()
-
-        log("EMOTION DECAY", f"{user_id} → {emotion['state']} (Lv{emotion['level']})")
-
 
 # -----------------------------
 # lonely連動
