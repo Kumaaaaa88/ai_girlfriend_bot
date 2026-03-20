@@ -1,6 +1,7 @@
 import os
 from openai import OpenAI
 from dotenv import load_dotenv
+from debug import log
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -9,6 +10,7 @@ client = OpenAI(api_key=OPENAI_API_KEY)
 
 
 def ask_gpt(context, user_message):
+    log(f"Sending request to GPT with context: {context}")
     messages = [
         {"role": "system", "content": context},
         {"role": "user", "content": user_message},
